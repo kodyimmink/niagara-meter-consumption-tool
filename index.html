@@ -1,0 +1,139 @@
+<!-- @noSnoop -->
+<!DOCTYPE html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Meter Consumption Tool</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="./css/styles.css">
+
+    <!-- bootstrap css -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <!-- date range picker css -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+    <!-- c3 charts css -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.13/c3.min.css" rel="stylesheet">
+
+    <!-- font awecome css-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+</head>
+
+<body onload="generateNodes()">
+    <!-- As a link -->
+    <nav class="navbar navbar-dark" style="background-color: #3052a3 !important">
+        <a class="navbar-brand" href="">Meter Consumption Tool</a>
+    </nav>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="container-fluid">
+                    <div>
+                        <h5 class="my-3">Meter(s)</h5>
+                        <select id="metersListSelect" multiple style="height: 160px; max-width: 350px"
+                            class="form-control"></select>
+                    </div>
+                    <div>
+                        <h5 class="my-3">Time Range</h5>
+                        <input type="text" name="datetimesPicker" id="datetimesPicker" style="max-width: 350px"
+                            class="form-control" />
+                    </div>
+                    <div class="row" style="max-width: 350px">
+                        <div class="col">
+                            <h5 class="my-3">Summarize by Interval</h5>
+                            <select id="summarizeIntervalSelect" style="max-width: 260px" class="form-control">
+                                <option value="15">15 minutes</option>
+                                <option value="60">1 hour</option>
+                                <option value="1440">24 hours</option>
+                            </select>
+                        </div>
+                        <div>
+                            <button type="submit" onclick="createRequestObject()" class="btn btn-primary" style="position: relative; margin-top: 56px;">Submit</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8" style="height: 420px">
+                <div class="container-fluid pt-4">
+                    <div id="lineChart"></div>
+                </div>
+            </div>
+        </div>
+        <div class="pt-2">
+            <button type="button" class="btn-sm btn-primary" style="float: right" onclick="exportTableToCSV('tableData.csv')"><i class="fa fa-download"></i> Download File</button>
+            <div class="container-fluid table-responsive p-2">
+                <table id="consumptionTable" class="table table-sm table-hover table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+            <div id="errorMessage"></div>
+        </div>
+        
+    </div>
+
+
+    <!-- bootstrap js -->
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+        integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+        integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous">
+    </script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+        integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous">
+    </script>
+
+    <!-- date range picker js -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js">
+    </script>
+
+    <!-- c3/d3 charts js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.15.0/d3.min.js" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.13/c3.min.js"></script>
+
+    <script
+        src="https://bms.gm.com/ord/file:%5EWorkingPX/S_9012_PX/GMLockportMeterConsumption/js/index.js%7Cview:web:FileDownloadView"
+        async defer></script>
+
+
+
+    <script>
+        //add date range picker to dom
+        $(function () {
+            $('input[name="datetimesPicker"]').daterangepicker({
+                timePicker: true,
+                startDate: moment().startOf('hour').subtract(7, 'days'),
+                endDate: moment().startOf('hour'),
+                locale: {
+                    format: 'M/DD/YYYY hh:mm A'
+                }
+            });
+        });
+
+        //configure event when dates are choosen
+        $('#datetimesPicker').on('apply.daterangepicker', function (ev, picker) {
+
+            //TO-DO: set global variables here
+            startDateTime = picker.startDate.format('YYYY-MM-DDThh:mm:ssZ');
+            endDateTimeTemp = picker.endDate.format('YYYY-MM-DDThh:mm:ssZ');
+
+            //add 10 seconds to get last trend in selected window, Niagara does not get last trend when date <= date selected
+            endDateTime = (moment(endDateTimeTemp).add(10, 's')).format('YYYY-MM-DDThh:mm:ssZ');
+        });
+    </script>
+
+</body>
+
+</html>
